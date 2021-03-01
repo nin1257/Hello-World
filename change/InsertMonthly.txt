@@ -1,0 +1,24 @@
+-- =============================================        
+-- Author:  <Author,,Name>        
+-- Create date: <Create Date,,>        
+-- Description: <Description,,>        
+-- =============================================        
+CREATE PROCEDURE InsertMonthly        
+ @count   int,        
+ @staffno  varchar(50),        
+ @staffname  varchar(50),        
+ @position  varchar(50),        
+ @location  varchar(50),        
+ @division  varchar(50),        
+ @dept   varchar(50),        
+ @unit   varchar(50)        
+        
+         
+ AS        
+BEGIN        
+  Insert into MonthlyHealthCare        
+  (Sr,StaffNo,StaffName,Position,Location,Division,Dept,Unit)        
+  values(@count,@staffno,@staffname,@position,@location,@division,@dept,@unit)        
+        
+         
+END 

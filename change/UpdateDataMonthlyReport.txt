@@ -1,0 +1,63 @@
+CREATE Procedure UpdateDataMonthlyReport          
+          
+     @count varchar(50),       
+     @staffid char(36)  ,      
+     @s varchar(50),  
+     @formonth varchar(50),  
+     @tomonth varchar(50)   
+         
+  as      
+  begin        
+  Declare @amount decimal(18,2)          
+  Declare @name varchar(50)     
+  Declare @remark varchar(max)    
+  Declare @remark1 varchar(max)    
+  Declare @staffcount int       
+  set @staffcount=(select COUNT(StaffName) from MonthlyHealthCare where StaffNo=@s)         
+  set @name=(select top 1 StaffName From MonthlyHealthCare where StaffName=@count)          
+        
+ set @amount=          
+ (          
+ select sum(Amount) From           
+ HealthCareApproveData          
+ inner join HealthCareDetail          
+ on HealthCareApproveData.HealthCareDetailId=HealthCareDetail.HealthCareDetailId          
+ where HealthCareApproveData.StaffID=@staffid     
+ and HealthCareDetail.ApproveName=@count  
+ and HealthCareApproveData.ForMonth between @formonth and @tomonth          
+ )     
+     
+ set @remark=    
+ (    
+   select   
+ Stuff((SElect isnull(Remark,'')From HealthCareDetail ha2 where ha1.ApproveName=ha2.ApproveName order by Staffid  
+ For XML PATH('')),1,1,'')  
+ from   
+ HealthCareDetail ha1         
+ inner join HealthCareApproveData          
+ on ha1.HealthCareDetailId=HealthCareApproveData.HealthCareDetailId          
+ where HealthCareApproveData.StaffID=@staffid        
+ and ha1.ApproveName=@count  
+ and HealthCareApproveData.ForMonth between @formonth and @tomonth  
+ group by ha1.ApproveName,HealthCareApproveData.Staffid          
+ )     
+     
+ set @remark1=    
+ (    
+   select   
+ Stuff((SElect isnull(Remark1,'')From HealthCareDetail ha2 where ha1.ApproveName=ha2.ApproveName order by Staffid  
+ For XML PATH('')),1,1,'')  
+ from   
+ HealthCareDetail ha1         
+ inner join HealthCareApproveData          
+ on ha1.HealthCareDetailId=HealthCareApproveData.HealthCareDetailId           
+ where HealthCareApproveData.StaffID=@staffid         
+ and ha1.ApproveName=@count   
+ and HealthCareApproveData.ForMonth between @formonth and @tomonth    
+ group by ha1.ApproveName,HealthCareApproveData.Staffid    
+ )        
+           
+ UPdate MonthlyHealthCare          
+ set Amount=isnull(@amount,0),Remark=ISNULL(@remark,''),Remark1=ISNULL(@remark1,'')          
+ where StaffNo=@s          
+ end           

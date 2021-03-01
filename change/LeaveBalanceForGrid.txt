@@ -1,0 +1,99 @@
+-- =============================================        
+-- Author:  <Author,,Name>        
+-- Create date: <Create Date,,>        
+-- Description: <Description,,>        
+-- =============================================        
+alter PROCEDURE LeaveBalanceForGrid        
+ @StaffID  char(36),        
+ @formonth  varchar(50)        
+AS        
+BEGIN        
+ declare @doa datetime;        
+ declare @MaxAllowDay decimal;        
+         
+ set @doa=(select DateofAppointment from Staff where StaffID=@StaffID)        
+   
+   
+   
+       SELECT     ISNULL(dbo.StaffLeaveType_vw.LeaveTypeDescription, '') AS LeaveTypeDescription,  
+        dbo.StaffLeaveType_vw.StaffID, dbo.StaffLeaveType_vw.LeaveTypeID,   
+                      dbo.StaffLeaveType_vw.MaxAllowDay,  
+                       ISNULL(dbo.Staff_vwLeaveTakenDay.Total,0) AS LeaveTakenDay,  
+                       ISNULL(dbo.StaffLeaveType_vw.MaxAllowDay, 0)   
+                      - ISNULL(dbo.Staff_vwLeaveTakenDay.Total, 0) AS 'LeaveBalance',   
+                  isnull( (select SUM(Total) From Staff_vwLeaveDay  
+                   where Staff_vwLeaveDay.StaffID=@StaffID and ForMonth =@formonth   
+                   and LeaveTypeID=  StaffLeaveType_vw.LeaveTypeID ),0) as LeaveDayForThisMonth,   
+                        
+                        
+                        
+                      0 AS LeaveDayForthisMonth, CASE WHEN @doa NOT BETWEEN  
+                          (SELECT     StartDate  
+                            FROM          FinancialYear  
+                            WHERE      Active = 1) AND  
+                          (SELECT     EndDate  
+                            FROM          FinancialYear  
+                            WHERE      Active = 1) THEN StaffLeaveType_vw.MaxAllowDay ELSE StaffLeaveType_vw.MaxAllowDay / 12 * DateDiff(M, @doa,  
+                          (SELECT     EndDate  
+                            FROM          FinancialYear  
+                            WHERE      Active = 1)) END AS MaxAllowDay1  
+FROM       
+                    dbo.StaffLeaveType_vw   
+                      left  JOIN  
+                      dbo.Staff_vwLeaveTakenDay   
+                      ON dbo.StaffLeaveType_vw.LeaveTypeID = dbo.Staff_vwLeaveTakenDay.LeaveTypeID   
+                      and StaffLeaveType_vw.StaffID=Staff_vwLeaveTakenDay.StaffID  
+                     -- RIGHT OUTER JOIN  
+                      --dbo.Staff_vwLeaveDay ON dbo.LeaveType.LeaveTypeID = dbo.Staff_vwLeaveDay.LeaveTypeID  
+WHERE     (dbo.StaffLeaveType_vw.StaffID = @StaffID)   
+and  StaffLeaveType_vw.IsCarry <>'Y'  
+--AND (dbo.Staff_vwLeaveDay.ForMonth = @formonth)  
+            
+            
+            union all
+            
+            
+                
+SELECT DISTINCT             
+                    
+                       dbo.StaffLeaveType_vw.LeaveTypeDescription,  
+                       StaffLeaveType_vw.Staffid,
+                                   StaffLeaveType_vw.LeaveTypeid,
+                                   dbo.StaffLeaveType_vw.MaxAllowDay,  
+                      [dbo].GetLeaveTotalDay(StaffLeaveType_vw.Staffid,StaffLeaveType_vw.LeaveTypeid) as LeaveTaken,      
+                    (  isnull((      
+select Balance From LeaveOpeningTable where LeaveOpeningTable.Staffid=StaffLeaveType_vw.Staffid      
+and LeaveTypeId=StaffLeaveType_vw.LeaveTypeid and Period=Year(getdate())      
+),0) +      
+[dbo].GetLeaveTotalEntitle(StaffLeaveType_vw.Staffid,StaffLeaveType_vw.LeaveTypeid)      
+)-  [dbo].GetLeaveTotalDay(StaffLeaveType_vw.Staffid,StaffLeaveType_vw.LeaveTypeid)      
+as LeaveBalance,      
+                      isnull( (select SUM(Total) From Staff_vwLeaveDay  
+                   where Staff_vwLeaveDay.StaffID=@StaffID and ForMonth =@formonth   
+                   and LeaveTypeID=  StaffLeaveType_vw.LeaveTypeID ),0) as LeaveDayForThisMonth,   
+                          0 AS LeaveDayForthisMonth, CASE WHEN @doa NOT BETWEEN  
+                          (SELECT     StartDate  
+                            FROM          FinancialYear  
+                            WHERE      Active = 1) AND  
+                          (SELECT     EndDate  
+                            FROM          FinancialYear  
+                            WHERE      Active = 1) THEN StaffLeaveType_vw.MaxAllowDay ELSE StaffLeaveType_vw.MaxAllowDay / 12 * DateDiff(M, @doa,  
+                          (SELECT     EndDate  
+                            FROM          FinancialYear  
+                            WHERE      Active = 1)) END AS MaxAllowDay1  
+FROM         dbo.Staff_vwByOrganization INNER JOIN            
+                      dbo.StaffLeaveType_vw ON dbo.Staff_vwByOrganization.Staffid       
+                      = dbo.StaffLeaveType_vw.StaffID inner join       
+                      dbo.PostInfo ON dbo.StaffLeaveType_vw.PostID = dbo.PostInfo.PostID            
+            
+WHERE                
+  
+               (dbo.StaffLeaveType_vw.StaffID = @StaffID)   
+and  StaffLeaveType_vw.IsCarry ='Y'  
+GROUP BY StaffLeaveType_vw.staffid,StaffLeaveType_vw.LeaveTypeId, dbo.StaffLeaveType_vw.StaffNo, dbo.StaffLeaveType_vw.FullName, dbo.PostInfo.Description, dbo.StaffLeaveType_vw.LeaveTypeDescription,              
+                      dbo.StaffLeaveType_vw.MaxAllowDay, dbo.Staff_vwByOrganization.Unit, dbo.Staff_vwByOrganization.Dept,             
+                      dbo.Staff_vwByOrganization.Location, dbo.Staff_vwByOrganization.Division,StaffLeaveType_vw.OrganizationID            
+
+            
+            
+END 

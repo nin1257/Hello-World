@@ -1,0 +1,5 @@
+CREATE procedure selectMonthlyHealthCare        
+as        
+select Sr,StaffNo,StaffName as FullName,Position,Location,Division,Dept,Unit,Remark,Remark1,      
+Amount from MonthlyHealthCare    
+order by Sr
